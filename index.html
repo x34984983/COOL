@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>泰巷打抛饭</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div id="app">
+        <div id="sync-status" class="sync-status">网络不佳，请稍后</div>
+        
+        <!-- 菜单页面 -->
+        <div id="page-menu" class="page active">
+            <div class="header">
+                <div class="header-title">泰巷打抛饭</div>
+                <div class="header-subtitle">正宗泰国风味 · 现点现做</div>
+            </div>
+            <div class="dish-list" id="dish-list"></div>
+            <div class="bottom-padding"></div>
+            
+            <div class="checkout-bar">
+                <div class="checkout-count">已选 <span id="cart-count">0</span> 件</div>
+                <div class="checkout-price">¥<span id="cart-total">0.00</span></div>
+                <button class="checkout-btn disabled" id="checkout-btn" onclick="goToCart()">去结算</button>
+            </div>
+        </div>
+        
+        <!-- 购物车页面 -->
+        <div id="page-cart" class="page">
+            <div class="page-header">
+                <div class="back-btn" onclick="goToMenu()">‹</div>
+                <div class="page-title">购物车</div>
+            </div>
+            <div class="cart-list" id="cart-list"></div>
+            <div id="cart-empty" class="empty-state" style="display:none;">
+                <div class="empty-icon">🛒</div>
+                <div class="empty-text">购物车是空的</div>
+                <button class="success-btn" onclick="goToMenu()">去点餐</button>
+            </div>
+            <div class="cart-bottom-bar" id="cart-bottom-bar" style="display:none;">
+                <div>合计：<span style="color:#e53935;font-weight:bold;font-size:18px;">¥<span id="cart-total-2">0.00</span></span></div>
+                <button class="cart-checkout-btn" onclick="confirmOrder()">确认下单</button>
+            </div>
+        </div>
+        
+        <!-- 下单成功页面 -->
+        <div id="page-success" class="page">
+            <div class="success-container">
+                <div class="success-title">下单成功！</div>
+                <div class="pickup-code-title">您的取餐号</div>
+                <div class="pickup-code" id="success-pickup-code">001</div>
+                <img src="https://aka.doubaocdn.com/s/Ah5e1wcFzY" class="pay-qrcode" alt="微信收款码">
+                <div class="qrcode-tip-large">长按保存到手机 → 微信扫一扫从相册选择</div>
+                <button class="success-btn" onclick="goToMenu()">返回首页</button>
+            </div>
+        </div>
+        
+        <!-- 客服页面 -->
+        <div id="page-chat" class="page">
+            <div class="page-header">
+                <div class="page-title">客服</div>
+            </div>
+            <div class="chat-container">
+                <div class="chat-section">
+                    <div class="chat-title">联系商家微信</div>
+                    <div class="wechat-id">shoudao100bufantan</div>
+                    <button class="copy-btn" onclick="copyWechat()">一键复制</button>
+                    <div class="chat-tip">点击复制微信号，打开微信添加好友即可沟通</div>
+                </div>
+                <div class="chat-section">
+                    <button class="call-btn" onclick="makeCall()">联系商家</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 我的页面 -->
+        <div id="page-mine" class="page">
+            <div class="page-header">
+                <div class="page-title">我的</div>
+            </div>
+            <div id="pickup-section" class="pickup-section" style="display:none;">
+                <div class="pickup-label">您的取餐号</div>
+                <div class="pickup-code-display" id="mine-pickup-code">001</div>
+            </div>
+            <div id="no-pickup-section" class="no-pickup-section">暂无待取餐订单</div>
+            
+            <div class="mine-menu">
+                <div class="mine-item" onclick="goToMyOrders()">
+                    <span>我的订单</span>
+                    <span>›</span>
+                </div>
+                <div class="mine-item" onclick="goToAdminLogin()">
+                    <span>管理员入口</span>
+                    <span>›</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 我的订单页面 -->
+        <div id="page-myOrders" class="page">
+            <div class="page-header">
+                <div class="back-btn" onclick="goToMine()">‹</div>
+                <div class="page-title">我的订单</div>
+            </div>
+            <div class="orders-list" id="my-orders-list"></div>
+            <div id="orders-empty" class="empty-state" style="display:none;">
+                <div class="empty-icon">📋</div>
+                <div class="empty-text">暂无订单记录</div>
+                <button class="success-btn" onclick="goToMenu()">去点餐</button>
+            </div>
+        </div>
+        
+        <!-- 管理员登录页面 -->
+        <div id="page-adminLogin" class="page">
+            <div class="page-header">
+                <div class="back-btn" onclick="goToMine()">‹</div>
+                <div class="page-title">管理员登录</div>
+            </div>
+            <div class="login-container">
+                <input type="text" class="login-input" id="admin-username" placeholder="请输入账号">
+                <input type="password" class="login-input" id="admin-password" placeholder="请输入密码">
+                <label class="remember-me">
+                    <input type="checkbox" id="remember-me" checked> 记住登录状态（30天）
+                </label>
+                <button class="login-btn" onclick="adminLogin()">登录</button>
+            </div>
+        </div>
+        
+        <!-- 管理员后台 -->
+        <div id="page-admin" class="page">
+            <div class="admin-header">
+                <div class="back-btn" onclick="adminLogout()">退出</div>
+                <div class="page-title">管理员后台</div>
+            </div>
+            
+            <div class="admin-tabs">
+                <div class="admin-tab active" onclick="switchAdminTab('orders')">订单管理</div>
+                <div class="admin-tab" onclick="switchAdminTab('stats')">销售统计</div>
+                <div class="admin-tab" onclick="switchAdminTab('dishes')">菜品管理</div>
+                <div class="admin-tab" onclick="switchAdminTab('cleanup')">数据清理</div>
+            </div>
+            
+            <!-- 订单管理 -->
+            <div id="admin-tab-orders" class="admin-tab-content active">
+                <div class="order-toggle">
+                    <div class="order-btn active" id="order-pending-btn" onclick="switchOrderTab('pending')">待完成</div>
+                    <div class="order-btn" id="order-completed-btn" onclick="switchOrderTab('completed')">已完成</div>
+                </div>
+                <div class="select-all-container">
+                    <input type="checkbox" id="select-all" class="select-all-checkbox" onchange="selectAllOrders()">
+                    <span class="select-all-text">全选</span>
+                </div>
+                <div class="batch-actions">
+                    <button class="batch-btn batch-complete" onclick="batchComplete()">完成</button>
+                    <button class="batch-btn batch-delete" onclick="batchDelete()">删除</button>
+                </div>
+                <div class="admin-orders-list" id="admin-orders-list"></div>
+            </div>
+            
+            <!-- 销售统计 -->
+            <div id="admin-tab-stats" class="admin-tab-content">
+                <div class="stats-container">
+                    <div class="stats-toggle">
+                        <div class="stats-btn active" id="stats-day-btn" onclick="switchStatsTab('day')">最近7天</div>
+                        <div class="stats-btn" id="stats-month-btn" onclick="switchStatsTab('month')">最近6个月</div>
+                        <div class="stats-btn" id="stats-year-btn" onclick="switchStatsTab('year')">最近6年</div>
+                        <div class="stats-btn clean-btn" onclick="exportOrdersToCSV()" style="background:#2196f3;color:white;margin-left:auto;">导出订单数据</div>
+                        <div class="stats-btn clean-btn" onclick="cleanOldOrders(30)" style="background:#e53935;color:white;margin-left:8px;">清理30天前数据</div>
+                    </div>
+                    <div class="stats-card">
+                        <div class="stats-summary">
+                            <div class="stat-item">
+                                <div class="stat-value" id="total-orders">0</div>
+                                <div class="stat-label">总订单数</div>
+                            </div>
+                            <div class="stat-item">
+                                <div class="stat-value" id="total-sales">¥0</div>
+                                <div class="stat-label">总销售额</div>
+                            </div>
+                        </div>
+                        <div class="stats-title">销售柱状图</div>
+                        <canvas id="stats-chart" height="200"></canvas>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 菜品管理 -->
+            <div id="admin-tab-dishes" class="admin-tab-content">
+                <div class="dish-manage-list" id="dish-manage-list"></div>
+                <button class="add-dish-btn" onclick="openAddDishModal()">+</button>
+            </div>
+            
+            <!-- 数据清理 -->
+            <div id="admin-tab-cleanup" class="admin-tab-content">
+                <div class="cleanup-container">
+                    <div class="cleanup-warning">
+                        <div class="cleanup-icon">⚠️</div>
+                        <div class="cleanup-warning-text">
+                            <strong>重要提示</strong><br>
+                            仅清理<span style="color:#4caf50;font-weight:bold;">已完成</span>的订单，待完成订单不会被删除
+                        </div>
+                    </div>
+                    
+                    <div class="cleanup-stats" id="cleanup-stats">
+                        <div class="cleanup-stat-item">
+                            <div class="cleanup-stat-value" id="total-completed-orders">0</div>
+                            <div class="cleanup-stat-label">已完成订单总数</div>
+                        </div>
+                        <div class="cleanup-stat-item">
+                            <div class="cleanup-stat-value" id="db-estimated-size">0 KB</div>
+                            <div class="cleanup-stat-label">预估占用空间</div>
+                        </div>
+                    </div>
+                    
+                    <div class="cleanup-section">
+                        <div class="cleanup-section-title">数据导出</div>
+                        <div class="cleanup-buttons">
+                            <button class="cleanup-btn export-btn" onclick="exportOrdersToCSV()" style="background:#2E7D32;color:white;">📥 导出全部订单（CSV）</button>
+                        </div>
+                    </div>
+                    
+                    <div class="cleanup-section">
+                        <div class="cleanup-section-title">选择清理范围</div>
+                        <div class="cleanup-buttons">
+                            <button class="cleanup-btn" onclick="cleanupOrders(7)">清理7天前的订单</button>
+                            <button class="cleanup-btn" onclick="cleanupOrders(30)">清理30天前的订单</button>
+                            <button class="cleanup-btn cleanup-btn-warning" onclick="cleanupOrders(90)">清理90天前的订单</button>
+                            <button class="cleanup-btn cleanup-btn-danger" onclick="cleanupOrders(0)">清理全部已完成订单</button>
+                        </div>
+                    </div>
+                    
+                    <div class="cleanup-tip">
+                        💡 建议：每月清理一次30天前的历史订单，可有效控制数据库空间
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 底部导航 -->
+        <div class="tab-bar">
+            <div class="tab-item active" onclick="switchTab('menu')">
+                <div class="tab-icon">🍽️</div>
+                <div class="tab-text">菜单</div>
+            </div>
+            <div class="tab-item" onclick="switchTab('cart')">
+                <div class="tab-icon">🛒</div>
+                <div class="tab-text">购物车</div>
+            </div>
+            <div class="tab-item" onclick="switchTab('chat')">
+                <div class="tab-icon">💬</div>
+                <div class="tab-text">客服</div>
+            </div>
+            <div class="tab-item" onclick="switchTab('mine')">
+                <div class="tab-icon">👤</div>
+                <div class="tab-text">我的</div>
+            </div>
+        </div>
+        
+        <!-- 编辑菜品弹窗 -->
+        <div id="dish-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-title" id="modal-title">编辑菜品</div>
+                <div id="img-preview" class="modal-img-preview" onclick="triggerModalImageUpload()">点击选择图片</div>
+                <input type="file" id="modal-image-file" accept="image/*" style="display:none;">
+                <input type="text" class="modal-input" id="dish-name-input" placeholder="菜品名称">
+                <input type="number" class="modal-input" id="dish-price-input" placeholder="价格">
+                <div class="modal-actions">
+                    <button class="modal-btn modal-cancel" onclick="closeDishModal()">取消</button>
+                    <button class="modal-btn modal-confirm" onclick="saveDish()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/app.js"></script>
+</body>
+</html>
